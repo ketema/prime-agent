@@ -869,11 +869,15 @@ export function matchesKey(data: string, keyId: KeyId): boolean {
 				if (matchesModifyOtherKeys(data, CODEPOINTS.enter, MODIFIERS.shift)) {
 					return true;
 				}
-				// When Kitty protocol is active, legacy sequences are custom terminal mappings
+				// Linux console / legacy terminal Shift+Enter sequence
+				if (data === "\x1b[13;2~") {
+					return true;
+				}
+				// Custom terminal mappings (Ghostty, Kitty, iTerm2):
 				// \x1b\r = Kitty's "map shift+enter send_text all \e\r"
 				// \n = Ghostty's "keybind = shift+enter=text:\n"
-				if (_kittyProtocolActive) {
-					return data === "\x1b\r" || data === "\n";
+				if (data === "\x1b\r" || data === "\n") {
+					return true;
 				}
 				return false;
 			}
@@ -899,7 +903,6 @@ export function matchesKey(data: string, keyId: KeyId): boolean {
 			if (modifier === 0) {
 				return (
 					data === "\r" ||
-					(!_kittyProtocolActive && data === "\n") ||
 					data === "\x1bOM" || // SS3 M (numpad enter in some terminals)
 					matchesKittySequence(data, CODEPOINTS.enter, 0) ||
 					matchesKittySequence(data, CODEPOINTS.kpEnter, 0)
@@ -1245,12 +1248,12 @@ export function parseKey(data: string): string | undefined {
 		return formatParsedKey(modifyOtherKeys.codepoint, modifyOtherKeys.modifier);
 	}
 
-	// Mode-aware legacy sequences
-	// When Kitty protocol is active, ambiguous sequences are interpreted as custom terminal mappings:
-	// - \x1b\r = shift+enter (Kitty mapping), not alt+enter
-	// - \n = shift+enter (Ghostty mapping)
-	if (_kittyProtocolActive) {
-		if (data === "\x1b\r" || data === "\n") return "shift+enter";
+	// Terminal mappings for Shift+Enter:
+	// - \x1b[13;2~ = legacy Shift+Enter
+	// - \x1b\r = Kitty / custom Shift+Enter (when not legacy alt+enter)
+	// - \n = Ghostty / custom Shift+Enter mapping
+	if (data === "\x1b[13;2~" || (_kittyProtocolActive && data === "\x1b\r") || data === "\n") {
+		return "shift+enter";
 	}
 
 	const legacySequenceKeyId = LEGACY_SEQUENCE_KEY_IDS[data];
@@ -1266,7 +1269,7 @@ export function parseKey(data: string): string | undefined {
 	if (data === "\x1b\x1d") return "ctrl+alt+]";
 	if (data === "\x1b\x1f") return "ctrl+alt+-";
 	if (data === "\t") return "tab";
-	if (data === "\r" || (!_kittyProtocolActive && data === "\n") || data === "\x1bOM") return "enter";
+	if (data === "\r" || data === "\x1bOM") return "enter";
 	if (data === "\x00") return "ctrl+space";
 	if (data === " ") return "space";
 	if (data === "\x7f") return "backspace";

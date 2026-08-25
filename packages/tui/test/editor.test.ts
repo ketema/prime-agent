@@ -287,6 +287,38 @@ describe("Editor component", () => {
 		});
 	});
 
+	describe("Shift+Enter newline handling", () => {
+		it("inserts newline on Shift+Enter CSI-u sequence", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+
+			editor.handleInput("hello");
+			editor.handleInput("\x1b[13;2u"); // Shift+Enter (Kitty / CSI-u)
+			editor.handleInput("world");
+
+			assert.strictEqual(editor.getText(), "hello\nworld");
+		});
+
+		it("inserts newline on Shift+Enter modifyOtherKeys sequence", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+
+			editor.handleInput("hello");
+			editor.handleInput("\x1b[27;2;13~"); // Shift+Enter (modifyOtherKeys)
+			editor.handleInput("world");
+
+			assert.strictEqual(editor.getText(), "hello\nworld");
+		});
+
+		it("inserts newline on Shift+Enter legacy sequence", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+
+			editor.handleInput("hello");
+			editor.handleInput("\x1b[13;2~"); // Shift+Enter (legacy)
+			editor.handleInput("world");
+
+			assert.strictEqual(editor.getText(), "hello\nworld");
+		});
+	});
+
 	describe("Backslash+Enter newline workaround", () => {
 		it("inserts backslash immediately (no buffering)", () => {
 			const editor = new Editor(createTestTUI(), defaultEditorTheme);

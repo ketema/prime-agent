@@ -235,22 +235,13 @@ export class ProcessTerminal implements Terminal {
 				return;
 			}
 
-			// Check for Kitty protocol response (only if not already enabled)
-			if (!this._kittyProtocolActive) {
-				const match = sequence.match(kittyResponsePattern);
-				if (match) {
-					this.clearKeyboardProtocolFallbackTimer();
-					this._kittyProtocolActive = true;
-					setKittyProtocolActive(true);
-
-					// Enable Kitty keyboard protocol (push flags)
-					// Flag 1 = disambiguate escape codes
-					// Flag 2 = report event types (press/repeat/release)
-					// Flag 4 = report alternate keys (shifted key, base layout key)
-					// Base layout key enables shortcuts to work with non-Latin keyboard layouts
-					process.stdout.write("\x1b[>7u");
-					return; // Don't forward protocol response to TUI
-				}
+			// Check for Kitty protocol response
+			const match = sequence.match(kittyResponsePattern);
+			if (match) {
+				this.clearKeyboardProtocolFallbackTimer();
+				this._kittyProtocolActive = true;
+				setKittyProtocolActive(true);
+				return; // Don't forward protocol response to TUI
 			}
 
 			if (this.inputHandler) {
@@ -289,11 +280,15 @@ export class ProcessTerminal implements Terminal {
 		this.setupStdinBuffer();
 		process.stdin.on("data", this.stdinDataHandler!);
 		this.queryDefaultTerminalColors();
-		process.stdout.write("\x1b[?u");
+		// Push Kitty keyboard flags (flag 1: disambiguate escape codes, flag 4: alternate keys)
+		// and query flags for protocol response confirmation.
+		process.stdout.write("\x1b[>7u\x1b[?u");
+		this._kittyProtocolActive = true;
+		setKittyProtocolActive(true);
 		this.clearKeyboardProtocolFallbackTimer();
 		this.keyboardProtocolFallbackTimer = setTimeout(() => {
 			this.keyboardProtocolFallbackTimer = undefined;
-			if (!this._kittyProtocolActive && !this._modifyOtherKeysActive) {
+			if (!this._modifyOtherKeysActive) {
 				process.stdout.write("\x1b[>4;2m");
 				this._modifyOtherKeysActive = true;
 			}

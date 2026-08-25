@@ -4,6 +4,8 @@
 
 ## [0.7.4] - 2026-08-19
 
+- Fixed Shift+Enter not inserting a newline on legacy terminal escape sequences (`\\x1b[13;2~`).
+
 ## [0.7.3] - 2026-08-17
 
 - Fixed hyperlinks not being clickable in fullscreen mode on terminals that gate native link handling while mouse reporting is active (e.g. Ghostty); left-clicking a link now opens it directly.
