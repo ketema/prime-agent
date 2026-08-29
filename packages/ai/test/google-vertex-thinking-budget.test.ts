@@ -70,4 +70,41 @@ describe("Google Vertex thinking budget payload", () => {
 			thinkingBudget: 512,
 		});
 	});
+
+	it("clamps minimal reasoning to LOW for Gemini 3 Flash on Vertex AI", async () => {
+		const flash3 = getModel("google-vertex", "gemini-3-flash-preview");
+		let capturedPayload: GenerateContentParameters | undefined;
+		const stream = streamSimpleGoogleVertex(flash3, context, {
+			apiKey: "fake-key",
+			reasoning: "minimal",
+			onPayload: (payload) => {
+				capturedPayload = payload as GenerateContentParameters;
+				return payload;
+			},
+		});
+
+		await stream.result();
+		expect(capturedPayload?.config?.thinkingConfig).toEqual({
+			includeThoughts: true,
+			thinkingLevel: "LOW",
+		});
+	});
+
+	it("uses LOW thinking level when thinking is disabled for Gemini 3 Flash on Vertex AI", async () => {
+		const flash3 = getModel("google-vertex", "gemini-3-flash-preview");
+		let capturedPayload: GenerateContentParameters | undefined;
+		const stream = streamSimpleGoogleVertex(flash3, context, {
+			apiKey: "fake-key",
+			reasoning: "off",
+			onPayload: (payload) => {
+				capturedPayload = payload as GenerateContentParameters;
+				return payload;
+			},
+		});
+
+		await stream.result();
+		expect(capturedPayload?.config?.thinkingConfig).toEqual({
+			thinkingLevel: "LOW",
+		});
+	});
 });
