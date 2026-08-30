@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
 import { setKittyProtocolActive } from "./keys.js";
+import { isNativeModifierPressed } from "./native-modifiers.js";
 import { StdinBuffer } from "./stdin-buffer.js";
 import {
 	parseOscColorResponse,
@@ -10,6 +11,12 @@ import {
 	type Rgb,
 	setDefaultTerminalColors,
 } from "./terminal-colors.js";
+
+const NATIVE_SHIFT_ENTER_SEQUENCE = "\x1b[13;2u";
+
+function isLocalSession(): boolean {
+	return !process.env.SSH_CONNECTION && !process.env.SSH_CLIENT && !process.env.SSH_TTY;
+}
 
 const cjsRequire = createRequire(import.meta.url);
 
@@ -235,17 +242,32 @@ export class ProcessTerminal implements Terminal {
 				return;
 			}
 
-			// Check for Kitty protocol response
-			const match = sequence.match(kittyResponsePattern);
-			if (match) {
-				this.clearKeyboardProtocolFallbackTimer();
-				this._kittyProtocolActive = true;
-				setKittyProtocolActive(true);
-				return; // Don't forward protocol response to TUI
+			// Check for Kitty protocol response (only if not already enabled)
+			if (!this._kittyProtocolActive) {
+				const match = sequence.match(kittyResponsePattern);
+				if (match) {
+					this.clearKeyboardProtocolFallbackTimer();
+					this._kittyProtocolActive = true;
+					setKittyProtocolActive(true);
+
+					// Enable Kitty keyboard protocol (push flags)
+					// Flag 1 = disambiguate escape codes
+					// Flag 2 = report event types (press/repeat/release)
+					// Flag 4 = report alternate keys (shifted key, base layout key)
+					// Base layout key enables shortcuts to work with non-Latin keyboard layouts
+					process.stdout.write("\x1b[>7u");
+					return; // Don't forward protocol response to TUI
+				}
 			}
 
 			if (this.inputHandler) {
-				this.inputHandler(sequence);
+				const shouldDetectNativeShiftEnter =
+					sequence === "\r" && isLocalSession() && (process.platform === "darwin" || process.platform === "win32");
+				const input =
+					shouldDetectNativeShiftEnter && isNativeModifierPressed("shift")
+						? NATIVE_SHIFT_ENTER_SEQUENCE
+						: sequence;
+				this.inputHandler(input);
 			}
 		});
 
@@ -280,15 +302,11 @@ export class ProcessTerminal implements Terminal {
 		this.setupStdinBuffer();
 		process.stdin.on("data", this.stdinDataHandler!);
 		this.queryDefaultTerminalColors();
-		// Push Kitty keyboard flags (flag 1: disambiguate escape codes, flag 4: alternate keys)
-		// and query flags for protocol response confirmation.
-		process.stdout.write("\x1b[>7u\x1b[?u");
-		this._kittyProtocolActive = true;
-		setKittyProtocolActive(true);
+		process.stdout.write("\x1b[?u");
 		this.clearKeyboardProtocolFallbackTimer();
 		this.keyboardProtocolFallbackTimer = setTimeout(() => {
 			this.keyboardProtocolFallbackTimer = undefined;
-			if (!this._modifyOtherKeysActive) {
+			if (!this._kittyProtocolActive && !this._modifyOtherKeysActive) {
 				process.stdout.write("\x1b[>4;2m");
 				this._modifyOtherKeysActive = true;
 			}
