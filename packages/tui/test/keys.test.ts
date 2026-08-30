@@ -300,6 +300,17 @@ describe("matchesKey", () => {
 			setKittyProtocolActive(false);
 		});
 
+		it("should handle custom shift+enter escape mapping conditionally", () => {
+			setKittyProtocolActive(false);
+			assert.strictEqual(matchesKey("\x1b\r", "shift+enter"), false);
+			assert.strictEqual(matchesKey("\x1b\r", "alt+enter"), true);
+
+			setKittyProtocolActive(true);
+			assert.strictEqual(matchesKey("\x1b\r", "shift+enter"), true);
+			assert.strictEqual(matchesKey("\x1b\r", "alt+enter"), false);
+			setKittyProtocolActive(false);
+		});
+
 		it("should parse ctrl+space", () => {
 			setKittyProtocolActive(false);
 			assert.strictEqual(matchesKey("\x00", "ctrl+space"), true);

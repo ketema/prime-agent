@@ -876,7 +876,10 @@ export function matchesKey(data: string, keyId: KeyId): boolean {
 				// Custom terminal mappings (Ghostty, Kitty, iTerm2):
 				// \x1b\r = Kitty's "map shift+enter send_text all \e\r"
 				// \n = Ghostty's "keybind = shift+enter=text:\n"
-				if (data === "\x1b\r" || data === "\n") {
+				if (_kittyProtocolActive && data === "\x1b\r") {
+					return true;
+				}
+				if (data === "\n") {
 					return true;
 				}
 				return false;

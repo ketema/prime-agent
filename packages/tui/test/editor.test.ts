@@ -317,6 +317,16 @@ describe("Editor component", () => {
 
 			assert.strictEqual(editor.getText(), "hello\nworld");
 		});
+
+		it("inserts newline on Shift+Enter linefeed mapping", () => {
+			const editor = new Editor(createTestTUI(), defaultEditorTheme);
+
+			editor.handleInput("hello");
+			editor.handleInput("\n"); // Shift+Enter (Ghostty / custom mapping)
+			editor.handleInput("world");
+
+			assert.strictEqual(editor.getText(), "hello\nworld");
+		});
 	});
 
 	describe("Backslash+Enter newline workaround", () => {

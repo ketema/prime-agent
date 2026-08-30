@@ -314,6 +314,19 @@ Content`,
 			expect(agentsFiles.some((f) => f.path.includes("AGENTS.md"))).toBe(true);
 		});
 
+		it("should not load home directory AGENTS.md as an ancestor context file", async () => {
+			const projectSubDir = join(cwd, "nested", "pkg");
+			mkdirSync(projectSubDir, { recursive: true });
+			writeFileSync(join(projectSubDir, "AGENTS.md"), "# Project Subdir Guidelines");
+
+			const loader = new DefaultResourceLoader({ cwd: projectSubDir, agentDir });
+			await loader.reload();
+
+			const { agentsFiles } = loader.getAgentsFiles();
+			expect(agentsFiles).toHaveLength(1);
+			expect(agentsFiles[0].path).toBe(join(projectSubDir, "AGENTS.md"));
+		});
+
 		it("should skip AGENTS.md and CLAUDE.md discovery when noContextFiles is true", async () => {
 			writeFileSync(join(cwd, "AGENTS.md"), "# Project Guidelines\n\nBe helpful.");
 			writeFileSync(join(cwd, "CLAUDE.md"), "# Claude Guidelines\n\nBe helpful.");

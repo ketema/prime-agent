@@ -1,0 +1,1 @@
+- Fixed context file discovery to avoid loading user home directory AGENTS.md or CLAUDE.md as an ancestor project file.

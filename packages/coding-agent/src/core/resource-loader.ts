@@ -93,8 +93,16 @@ export function loadProjectContextFiles(options: {
 
 	let currentDir = resolvedCwd;
 	const root = resolve("/");
+	const userHome = resolve(homedir());
 
 	while (true) {
+		// Stop walking up when reaching the user's home directory or filesystem root,
+		// because global context for Prime Agent is loaded explicitly from agentDir (~/.prime/agent/),
+		// and ~/AGENTS.md is a user-level file for external tools (e.g. Claude Code), not a project ancestor.
+		if (currentDir === userHome && resolve(resolvedAgentDir) !== userHome) {
+			break;
+		}
+
 		const contextFile = loadContextFileFromDir(currentDir);
 		if (contextFile && !seenPaths.has(contextFile.path)) {
 			ancestorContextFiles.unshift(contextFile);

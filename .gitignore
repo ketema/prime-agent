@@ -43,3 +43,13 @@ collect.sh
 
 __pycache__/
 *.pyc
+
+# Ephemeral test and session artifacts
+*.vtt
+.tmp-autonomous*
+prime-agent-session-*.html
+packages/*/.tmp-autonomous*
+packages/*/prime-agent-session-*.html
+
+# Generated AI model catalog (updated constantly; untracked locally)
+packages/ai/src/models.generated.ts
